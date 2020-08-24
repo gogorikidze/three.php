@@ -43,18 +43,18 @@ class Camera{
       array_push($this->frustrum, $line); //this scanline (arr) is pushed to main array
     }
   }
-  public function render($obj){
+  public function renderTriangle($triangle){
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
         $rayorigin = $this->frustrum[$h][$w];
         $raydirection = new Vec3(0,0,1);
-        if(check($rayorigin, $raydirection, $obj)){
-          echo '##';
+        if(check($rayorigin, $raydirection, $triangle)){
+          echo "##";
         }else{
-          echo '__';
+          echo "__";
         }
       }
-      echo'<br>';
+      echo nl2br("\n");
     }
   }
 }
@@ -85,12 +85,4 @@ function check($o, $d, $triangle){ //checks for ray triangle intersection
   if($t < 0){return false;}
   return true;
 }
-
-$tri = new Triangle(
-  new Vec3(-2,-2,5),
-  new Vec3(2,-2,5),
-  new Vec3(0,2,5)
-);
-$camera = new Camera(new Vec3(0,0,0), 30, 40, 3, 3);
-$camera->render($tri);
 ?>
