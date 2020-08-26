@@ -51,7 +51,7 @@ class Camera{
         if(check($rayorigin, $raydirection, $triangle)){
           echo "##";
         }else{
-          echo "__";
+          echo "&nbsp;&nbsp;&nbsp;";
         }
       }
       echo nl2br("\n");
