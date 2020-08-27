@@ -49,7 +49,8 @@ class Camera{
         $rayorigin = $this->frustrum[$h][$w];
         $raydirection = new Vec3(0,0,1);
         if(check($rayorigin, $raydirection, $triangle)){
-          echo "##";
+          echo $triangle->colorChar;
+          echo $triangle->colorChar;
         }else{
           echo "&nbsp;&nbsp;&nbsp;";
         }
@@ -57,12 +58,29 @@ class Camera{
       echo nl2br("\n");
     }
   }
+  public function render($scene, $frame){
+    $frame += 1;
+    header('refresh:0.01; url=index.php?frame='.$frame);
+
+    foreach($scene->objects as $object){
+        $this->renderTriangle($object);
+    }
+  }
 }
 class Triangle{
-  public function __construct($v0, $v1, $v2){
+  public function __construct($v0, $v1, $v2, $colorChar){
     $this->v0 = $v0;
     $this->v1 = $v1;
     $this->v2 = $v2;
+    $this->colorChar = $colorChar;
+  }
+}
+class Scene{
+  public function __construct(){
+    $this->objects = [];
+  }
+  public function addObject($object){
+    array_push($this->objects, $object);
   }
 }
 function check($o, $d, $triangle){ //checks for ray triangle intersection
