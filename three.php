@@ -1,6 +1,4 @@
-<?php
-session_start();
-
+<?php session_start();
 class Vec3{
   public function __construct($x, $y, $z) {
     $this->x = $x;
@@ -78,13 +76,18 @@ class Camera{
     $_SESSION['emptyBuffer'] = $buffer;
     $this->buffer = $_SESSION['emptyBuffer'];
   }
-  public function renderTriangle($triangle){
+  public function renderFace($face, $geometry, $mesh){
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
         $rayorigin = $this->frustum[$h][$w];
         $raydirection = new Vec3(0,0,1);
-        if(check($rayorigin, $raydirection, $triangle)){
-          $this->buffer[$h][$w] = $triangle->colorChar;
+        $toRender = new Triangle(
+          $geometry->vertices[$face->x],
+          $geometry->vertices[$face->y],
+          $geometry->vertices[$face->z],
+          $mesh->colorChar);
+        if($toRender->checkRay($rayorigin, $raydirection)){
+          $this->buffer[$h][$w] = $toRender->colorChar;
         }
       }
     }
@@ -93,12 +96,12 @@ class Camera{
     $frame += 1;
     header('refresh:0.001; url=index.php?frame='.$frame);
 
-    foreach($scene->objects as $object){
-      foreach($object->triangles as $triangle){
-          $this->renderTriangle($triangle);
+    foreach($scene->meshes as $mesh){
+      foreach($mesh->geometry->faces as $face){
+          $this->renderFace($face, $mesh->geometry, $mesh);
       }
-
     }
+
     $this->renderBuffer();
   }
   public function renderBuffer(){
@@ -122,45 +125,56 @@ class Triangle{
     $this->v2 = $v2;
     $this->colorChar = $colorChar;
   }
+  public function checkRay($o, $d){ //checks for ray triangle intersection
+    $triangle = $this;
+    $eO = $o; // origin point
+    $eD = $d; // direction
+    $eV0 = $triangle->v0;
+    $eV1 = $triangle->v1;
+    $eV2 = $triangle->v2;
+    $eE1 = $eV1->subv($eV0);
+    $eE2 = $eV2->subv($eV0);
+    $eT = $eO->subv($eV0);
+    $eP = $eD->vectorProduct($eE2);
+    $eQ = $eT->vectorProduct($eE1);
+    if($eP->scalarProduct($eE1) != 0){
+      $equc = 1 / $eP->scalarProduct($eE1);
+    }else{
+      return false;
+    }
+    $u = $equc * $eP->scalarProduct($eT);
+    if($u < 0){return false;}
+    $v = $equc * $eQ->scalarProduct($eD);
+    if($v < 0 || $v + $u > 1){return false;}
+    $t = $equc * $eQ->scalarProduct($eE2);
+    if($t < 0){return false;}
+    return true;
+  }
 }
 class Scene{
   public function __construct(){
-    $this->objects = [];
+    $this->meshes = [];
   }
-  public function addObject($object){
-    array_push($this->objects, $object);
+  public function addMesh($mesh){
+    array_push($this->meshes, $mesh);
   }
 }
 class Mesh{
-  public function __construct(){
-    $this->triangles = [];
-  }
-  public function addTriangle($triangle){
-    array_push($this->triangles, $triangle);
+  public function __construct($geometry, $colorChar){
+    $this->geometry = $geometry;
+    $this->colorChar = $colorChar;
   }
 }
-function check($o, $d, $triangle){ //checks for ray triangle intersection
-  $eO = $o; // origin point
-  $eD = $d; // direction
-  $eV0 = $triangle->v0;
-  $eV1 = $triangle->v1;
-  $eV2 = $triangle->v2;
-  $eE1 = $eV1->subv($eV0);
-  $eE2 = $eV2->subv($eV0);
-  $eT = $eO->subv($eV0);
-  $eP = $eD->vectorProduct($eE2);
-  $eQ = $eT->vectorProduct($eE1);
-  if($eP->scalarProduct($eE1) != 0){
-    $equc = 1 / $eP->scalarProduct($eE1);
-  }else{
-    return false;
+class Geometry{
+  public function __construct(){
+    $this->faces = [];
+    $this->vertices = [];
   }
-  $u = $equc * $eP->scalarProduct($eT);
-  if($u < 0){return false;}
-  $v = $equc * $eQ->scalarProduct($eD);
-  if($v < 0 || $v + $u > 1){return false;}
-  $t = $equc * $eQ->scalarProduct($eE2);
-  if($t < 0){return false;}
-  return true;
+  public function addFace($face){
+    array_push($this->faces, $face);
+  }
+  public function addVertex($vertex){
+    array_push($this->vertices, $vertex);
+  }
 }
 ?>
