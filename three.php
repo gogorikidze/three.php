@@ -1,4 +1,6 @@
 <?php
+session_start();
+
 class Vec3{
   public function __construct($x, $y, $z) {
     $this->x = $x;
@@ -22,48 +24,89 @@ class Camera{
     $this->position = $position;
     $this->h = $h;
     $this->w = $w;
-    $this->frustrum = [];
-    $this->createGrid();
+    $this->frustum = [];
+    $this->buffer = [];
+
+    if(isset($_SESSION['emptyBuffer'])){
+      $this->buffer = $_SESSION['emptyBuffer'];
+    }else{
+      $this->createBuffer();
+    }
+
+    if(isset($_SESSION['frustum'])){
+      $this->frustum = $_SESSION['frustum'];
+    }else{
+      $this->createfrustum();
+    }
   }
-  public function createGrid(){ // this grid creates an array of pixels in front of the camera
+  public function createfrustum(){ // this grid creates an array of pixels in front of the camera
+    $frustum = [];
     //these variables are used to center the array in front of the camera
-    $halfwfrustrum = $this->w/$this->density/2 - 1/$this->density/2;
-    $halfhfrustrum = $this->h/$this->density/2 - 1/$this->density/2;
+    $halfwfrustum = $this->w/$this->density/2 - 1/$this->density/2;
+    $halfhfrustum = $this->h/$this->density/2 - 1/$this->density/2;
 
     for($h = 0; $h < $this->h; $h++){
       $line = [];
       for($w = 0; $w < $this->w; $w++){
-        $thispixel = new Vec3(
-          $this->position->x - $w/$this->density + $halfwfrustrum,
-          $this->position->y - $h/$this->density + $halfhfrustrum,
+        $thisray = new Vec3(
+          $this->position->x - $w/$this->density + $halfwfrustum,
+          $this->position->y - $h/$this->density + $halfhfrustum,
           $this->position->z + $this->far
         );
-        array_push($line, $thispixel); //every pixel is pushed in line array
+        array_push($line, $thisray); //every pixel is pushed in line array
       }
-      array_push($this->frustrum, $line); //this scanline (arr) is pushed to main array
+      array_push($frustum, $line); //this scanline (arr) is pushed to main array
     }
+
+    $_SESSION['frustum'] = $frustum;
+    $this->frustum = $_SESSION['frustum'];
+  }
+  public function createBuffer(){
+    $buffer = [];
+    for($h = 0; $h < $this->h; $h++){
+      $line = [];
+      for($w = 0; $w < $this->w; $w++){
+        array_push($line, "empty");
+      }
+      array_push($buffer, $line);
+    }
+    $_SESSION['emptyBuffer'] = $buffer;
+    $this->buffer = $_SESSION['emptyBuffer'];
   }
   public function renderTriangle($triangle){
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
-        $rayorigin = $this->frustrum[$h][$w];
+        $rayorigin = $this->frustum[$h][$w];
         $raydirection = new Vec3(0,0,1);
         if(check($rayorigin, $raydirection, $triangle)){
-          echo $triangle->colorChar;
-          echo $triangle->colorChar;
-        }else{
-          echo "&nbsp;&nbsp;&nbsp;";
+          $this->buffer[$h][$w] = $triangle->colorChar;
         }
       }
-      echo nl2br("\n");
     }
   }
   public function render($scene, $frame){
     $frame += 1;
-    header('refresh:0.01; url=index.php?frame='.$frame);
+    //header('refresh:0.01; url=index.php?frame='.$frame);
 
     foreach($scene->objects as $object){
-        $this->renderTriangle($object);
+      foreach($object->triangles as $triangle){
+          $this->renderTriangle($triangle);
+      }
+
+    }
+    $this->renderBuffer();
+  }
+  public function renderBuffer(){
+    for($h = 0; $h < $this->h; $h++){
+      for($w = 0; $w < $this->w; $w++){
+        if($this->buffer[$h][$w] != "empty"){
+          echo $this->buffer[$h][$w];
+          echo $this->buffer[$h][$w];
+        }else{
+          echo "&nbsp;&nbsp;&nbsp;&nbsp;";
+        }
+      }
+      echo nl2br("\n");
     }
   }
 }
@@ -81,6 +124,14 @@ class Scene{
   }
   public function addObject($object){
     array_push($this->objects, $object);
+  }
+}
+class Mesh{
+  public function __construct(){
+    $this->triangles = [];
+  }
+  public function addTriangle($triangle){
+    array_push($this->triangles, $triangle);
   }
 }
 function check($o, $d, $triangle){ //checks for ray triangle intersection
