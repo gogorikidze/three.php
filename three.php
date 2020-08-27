@@ -18,7 +18,7 @@ class Vec3{
   }
 }
 class Camera{
-  public function __construct($position, $h, $w, $far, $density){
+  public function __construct($position, $h, $w, $far, $density, $cacheEnabled){
     $this->density = $density;
     $this->far = $far;
     $this->position = $position;
@@ -27,15 +27,20 @@ class Camera{
     $this->frustum = [];
     $this->buffer = [];
 
-    if(isset($_SESSION['emptyBuffer'])){
-      $this->buffer = $_SESSION['emptyBuffer'];
+    if($cacheEnabled){
+      if(isset($_SESSION['emptyBuffer'])){
+        $this->buffer = $_SESSION['emptyBuffer'];
+      }else{
+        $this->createBuffer();
+      }
+
+      if(isset($_SESSION['frustum'])){
+        $this->frustum = $_SESSION['frustum'];
+      }else{
+        $this->createfrustum();
+      }
     }else{
       $this->createBuffer();
-    }
-
-    if(isset($_SESSION['frustum'])){
-      $this->frustum = $_SESSION['frustum'];
-    }else{
       $this->createfrustum();
     }
   }
@@ -86,7 +91,7 @@ class Camera{
   }
   public function render($scene, $frame){
     $frame += 1;
-    //header('refresh:0.01; url=index.php?frame='.$frame);
+    header('refresh:0.001; url=index.php?frame='.$frame);
 
     foreach($scene->objects as $object){
       foreach($object->triangles as $triangle){
@@ -145,7 +150,11 @@ function check($o, $d, $triangle){ //checks for ray triangle intersection
   $eT = $eO->subv($eV0);
   $eP = $eD->vectorProduct($eE2);
   $eQ = $eT->vectorProduct($eE1);
-  $equc = 1 / $eP->scalarProduct($eE1);
+  if($eP->scalarProduct($eE1) != 0){
+    $equc = 1 / $eP->scalarProduct($eE1);
+  }else{
+    return false;
+  }
   $u = $equc * $eP->scalarProduct($eT);
   if($u < 0){return false;}
   $v = $equc * $eQ->scalarProduct($eD);
