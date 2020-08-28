@@ -69,7 +69,7 @@ class Camera{
     for($h = 0; $h < $this->h; $h++){
       $line = [];
       for($w = 0; $w < $this->w; $w++){
-        array_push($line, "empty");
+        array_push($line, ["empty", 1000]);
       }
       array_push($buffer, $line);
     }
@@ -85,9 +85,12 @@ class Camera{
           $geometry->vertices[$face->x],
           $geometry->vertices[$face->y],
           $geometry->vertices[$face->z],
-          $mesh->colorChar);
-        if($toRender->checkRay($rayorigin, $raydirection)){
-          $this->buffer[$h][$w] = $toRender->colorChar;
+          $face->colorChar);
+        $ray = $toRender->checkRay($rayorigin, $raydirection);
+        if($ray != false){
+          if($ray < $this->buffer[$h][$w][1]) {
+            $this->buffer[$h][$w] = [$toRender->colorChar, $ray];
+          }
         }
       }
     }
@@ -107,9 +110,9 @@ class Camera{
   public function renderBuffer(){
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
-        if($this->buffer[$h][$w] != "empty"){
-          echo $this->buffer[$h][$w];
-          echo $this->buffer[$h][$w];
+        if($this->buffer[$h][$w][0] != "empty"){
+          echo $this->buffer[$h][$w][0];
+          echo $this->buffer[$h][$w][0];
         }else{
           echo "&nbsp;&nbsp;&nbsp;&nbsp;";
         }
@@ -148,7 +151,15 @@ class Triangle{
     if($v < 0 || $v + $u > 1){return false;}
     $t = $equc * $eQ->scalarProduct($eE2);
     if($t < 0){return false;}
-    return true;
+    return $t;
+  }
+}
+class Face{
+  public function __construct($pos, $colorChar){
+    $this->x = $pos->x;
+    $this->y = $pos->y;
+    $this->z = $pos->z;
+    $this->colorChar = $colorChar;
   }
 }
 class Scene{
