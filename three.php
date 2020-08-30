@@ -89,9 +89,9 @@ class Camera{
       }
     }
   }
-  public function render($scene, $frame, $filename, $sysInfo){
+  public function render($scene, $frame, $sysInfo){
     $frame += 1;
-    header('refresh:0.001; url='.$filename.'?frame='.$frame);
+    header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
 
     foreach($scene->meshes as $mesh){
       foreach($mesh->geometry->faces as $face){
@@ -101,14 +101,17 @@ class Camera{
 
     $this->renderBuffer();
 
-
     if($sysInfo){
       $frameTime = microtime(true) - $this->frameStart;
       $fps = 1 / $frameTime;
-      echo nl2br("stats:// \n");
+      $faces = 0;
+      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
+      $calculations = $this->h * $this->w * $faces;
+      echo nl2br("stats: \n");
       echo nl2br("FramesPerSecond: ".$fps."\n");
-      echo nl2br("frameTime:".$frameTime."\n");
+      echo nl2br("frameTime: ".$frameTime."\n");
       echo nl2br("resolution: ".$this->w."x".$this->h."CPX \n");
+      echo nl2br("Calculations: ".$calculations."\n");
     }
   }
   public function renderBuffer(){
@@ -172,6 +175,13 @@ class Mesh{
   public function __construct($geometry, $colorChar){
     $this->geometry = $geometry;
     $this->colorChar = $colorChar;
+  }
+  public function setPosition($x, $y, $z){
+    foreach ($this->geometry->vertices as $vertex) {
+      $vertex->x += $x;
+      $vertex->y += $y;
+      $vertex->z += $z;
+    }
   }
 }
 class Geometry{

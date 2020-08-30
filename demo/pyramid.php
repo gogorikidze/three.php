@@ -1,5 +1,5 @@
 <?php
-include('three.php');
+include('../three.php');
 $frame = $_GET['frame'];
 
 $scene = new Scene();
@@ -10,7 +10,7 @@ $geometry = new Geometry();
 $geometry->addVertex(new Vec3(-1,0,-1));
 $geometry->addVertex(new Vec3(1,0,-1));
 $geometry->addVertex(new Vec3(0,0,1));
-$geometry->addVertex(new Vec3(0,2,0));
+$geometry->addVertex(new Vec3(0,1.5,0));
 
 $geometry->rotate($frame*7*pi()/180,0,0);
 
@@ -22,6 +22,6 @@ $geometry->addFace(new Face(0,1,2,'p'));
 $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 
-$camera = new Camera(new Vec3(0,1,5), 133/2, 239/2, 3, 60/2, true);
-$camera->render($scene, $frame, "pyramid.php");
+$camera = new Camera(new Vec3(0,0.7,5), 15, 35, 3, 10, false);
+$camera->render($scene, $frame, true);
 ?>
