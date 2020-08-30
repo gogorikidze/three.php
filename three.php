@@ -17,6 +17,7 @@ class Vec3{
 }
 class Camera{
   public function __construct($position, $h, $w, $far, $density, $cacheEnabled){
+    $this->frameStart = microtime(true);
     $this->density = $density;
     $this->far = $far;
     $this->position = $position;
@@ -88,9 +89,9 @@ class Camera{
       }
     }
   }
-  public function render($scene, $frame){
+  public function render($scene, $frame, $filename, $sysInfo){
     $frame += 1;
-    header('refresh:0.001; url=index.php?frame='.$frame);
+    header('refresh:0.001; url='.$filename.'?frame='.$frame);
 
     foreach($scene->meshes as $mesh){
       foreach($mesh->geometry->faces as $face){
@@ -99,6 +100,16 @@ class Camera{
     }
 
     $this->renderBuffer();
+
+
+    if($sysInfo){
+      $frameTime = microtime(true) - $this->frameStart;
+      $fps = 1 / $frameTime;
+      echo nl2br("stats:// \n");
+      echo nl2br("FramesPerSecond: ".$fps."\n");
+      echo nl2br("frameTime:".$frameTime."\n");
+      echo nl2br("resolution: ".$this->w."x".$this->h."CPX \n");
+    }
   }
   public function renderBuffer(){
     for($h = 0; $h < $this->h; $h++){
