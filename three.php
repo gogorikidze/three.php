@@ -80,17 +80,10 @@ class Camera{
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
         $rayorigin = $this->frustum[$h][$w];
-        $raydirection = new Vec3(0,0,1);
-        $toRender = new Triangle(
-          $geometry->vertices[$face->x],
-          $geometry->vertices[$face->y],
-          $geometry->vertices[$face->z],
-          $face->colorChar);
-        $ray = $toRender->checkRay($rayorigin, $raydirection);
-        if($ray != false){
-          if($ray < $this->buffer[$h][$w][1]) {
-            $this->buffer[$h][$w] = [$toRender->colorChar, $ray];
-          }
+        $raydirection = new Vec3(0,0,-1);
+        $ray = $face->checkRay($rayorigin, $raydirection, $geometry);
+        if($ray && $ray < $this->buffer[$h][$w][1]){
+            $this->buffer[$h][$w] = [$face->colorChar, $ray];
         }
       }
     }
@@ -121,20 +114,22 @@ class Camera{
     }
   }
 }
-class Triangle{
-  public function __construct($v0, $v1, $v2, $colorChar){
-    $this->v0 = $v0;
-    $this->v1 = $v1;
-    $this->v2 = $v2;
+class Face{
+  public function __construct($v0index, $v1index, $v2index, $colorChar){
+    $this->v0index = $v0index;
+    $this->v1index = $v1index;
+    $this->v2index = $v2index;
     $this->colorChar = $colorChar;
   }
-  public function checkRay($o, $d){ //checks for ray triangle intersection
-    $triangle = $this;
+  public function checkRay($o, $d, $geometry){ //checks for ray triangle intersection
+    $v0 = $geometry->vertices[$this->v0index];
+    $v1 = $geometry->vertices[$this->v1index];
+    $v2 = $geometry->vertices[$this->v2index];
     $eO = $o; // origin point
     $eD = $d; // direction
-    $eV0 = $triangle->v0;
-    $eV1 = $triangle->v1;
-    $eV2 = $triangle->v2;
+    $eV0 = $v0;
+    $eV1 = $v1;
+    $eV2 = $v2;
     $eE1 = $eV1->subv($eV0);
     $eE2 = $eV2->subv($eV0);
     $eT = $eO->subv($eV0);
@@ -152,14 +147,6 @@ class Triangle{
     $t = $equc * $eQ->scalarProduct($eE2);
     if($t < 0){return false;}
     return $t;
-  }
-}
-class Face{
-  public function __construct($pos, $colorChar){
-    $this->x = $pos->x;
-    $this->y = $pos->y;
-    $this->z = $pos->z;
-    $this->colorChar = $colorChar;
   }
 }
 class Scene{
@@ -186,6 +173,38 @@ class Geometry{
   }
   public function addVertex($vertex){
     array_push($this->vertices, $vertex);
+  }
+  public function rotate($pitch, $roll, $yaw) {
+    $cosa = cos($yaw);
+    $sina = sin($yaw);
+
+    $cosb = cos($pitch);
+    $sinb = sin($pitch);
+
+    $cosc = cos($roll);
+    $sinc = sin($roll);
+
+    $Axx = $cosa*$cosb;
+    $Axy = $cosa*$sinb*$sinc - $sina*$cosc;
+    $Axz = $cosa*$sinb*$cosc + $sina*$sinc;
+
+    $Ayx = $sina*$cosb;
+    $Ayy = $sina*$sinb*$sinc + $cosa*$cosc;
+    $Ayz = $sina*$sinb*$cosc - $cosa*$sinc;
+
+    $Azx = -$sinb;
+    $Azy = $cosb*$sinc;
+    $Azz = $cosb*$cosc;
+
+    foreach($this->vertices as $vertex){
+      $px = $vertex->x;
+      $py = $vertex->y;
+      $pz = $vertex->z;
+
+      $vertex->x = $Axx*$px + $Axy*$py + $Axz*$pz;
+      $vertex->y = $Ayx*$px + $Ayy*$py + $Ayz*$pz;
+      $vertex->z = $Azx*$px + $Azy*$py + $Azz*$pz;
+    }
   }
 }
 ?>
