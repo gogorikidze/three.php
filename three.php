@@ -25,6 +25,7 @@ class Camera{
     $this->w = $w;
     $this->frustum = [];
     $this->buffer = [];
+    $this->computations = 0;
 
     if($cacheEnabled){
       if(isset($_SESSION['emptyBuffer'])){
@@ -77,6 +78,78 @@ class Camera{
     $_SESSION['emptyBuffer'] = $buffer;
     $this->buffer = $_SESSION['emptyBuffer'];
   }
+  public function renderBuffer(){
+    for($h = 0; $h < $this->h; $h++){
+      for($w = 0; $w < $this->w; $w++){
+        if($this->buffer[$h][$w][0] != "empty"){
+          echo $this->buffer[$h][$w][0];
+          echo $this->buffer[$h][$w][0];
+        }else{
+          echo "&nbsp;&nbsp;&nbsp;&nbsp;";
+        }
+      }
+      echo nl2br("\n");
+    }
+  }
+  public function displayStats($display, $scene){
+    if($display){
+      $frameTime = microtime(true) - $this->frameStart;
+      $fps = 1 / $frameTime;
+      $faces = 0;
+      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
+      echo nl2br("stats: \n");
+      echo nl2br("FramesPerSecond: ".$fps."\n");
+      echo nl2br("frameTime: ".$frameTime."\n");
+      echo nl2br("resolution: ".$this->w."x".$this->h."CPX \n");
+      echo nl2br("Calculations: ".$this->computations."\n");
+    }
+  }
+}
+class RasterCamera extends Camera{
+  public function renderPixel($h, $w, $scene){
+    foreach($scene->meshes as $mesh){
+      foreach($mesh->geometry->faces as $face){
+        $point = $this->frustum[$h][$w];
+        if($face->isPointInTriangle($point, $mesh->geometry) && $face->AverageZ < $this->buffer[$h][$w][1]){
+            $this->buffer[$h][$w] = [$face->colorChar, $face->AverageZ];
+        }
+        $this->computations += 1;
+      }
+    }
+  }
+  public function projectFaces($scene){ //just changes point Z co-ords to Cameras Z co-ords
+    foreach($scene->meshes as $mesh){
+      foreach($mesh->geometry->faces as $face){
+        $v0 = $mesh->geometry->vertices[$face->v0index];
+        $v1 = $mesh->geometry->vertices[$face->v1index];
+        $v2 = $mesh->geometry->vertices[$face->v2index];
+
+        $face->AverageZ = ($v0->z + $v1->z + $v2->z)/3;
+
+        $v0->z = $this->position->z;
+        $v1->z = $this->position->z;
+        $v2->z = $this->position->z;
+      }
+    }
+  }
+  public function render($scene, $frame, $sysInfo){
+    $frame += 1;
+    header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
+
+    $this->projectFaces($scene);
+
+    for($h = 0; $h < $this->h; $h++){
+      for($w = 0; $w < $this->w; $w++){
+        $this->renderPixel($h, $w, $scene);
+      }
+    }
+
+    $this->renderBuffer();
+
+    $this->displayStats($sysInfo, $scene);
+  }
+}
+class RayCamera extends Camera{
   public function renderFace($face, $geometry, $mesh){
     for($h = 0; $h < $this->h; $h++){
       for($w = 0; $w < $this->w; $w++){
@@ -86,6 +159,7 @@ class Camera{
         if($ray && $ray < $this->buffer[$h][$w][1]){
             $this->buffer[$h][$w] = [$face->colorChar, $ray];
         }
+        $this->computations += 1;
       }
     }
   }
@@ -101,31 +175,7 @@ class Camera{
 
     $this->renderBuffer();
 
-    if($sysInfo){
-      $frameTime = microtime(true) - $this->frameStart;
-      $fps = 1 / $frameTime;
-      $faces = 0;
-      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
-      $calculations = $this->h * $this->w * $faces;
-      echo nl2br("stats: \n");
-      echo nl2br("FramesPerSecond: ".$fps."\n");
-      echo nl2br("frameTime: ".$frameTime."\n");
-      echo nl2br("resolution: ".$this->w."x".$this->h."CPX \n");
-      echo nl2br("Calculations: ".$calculations."\n");
-    }
-  }
-  public function renderBuffer(){
-    for($h = 0; $h < $this->h; $h++){
-      for($w = 0; $w < $this->w; $w++){
-        if($this->buffer[$h][$w][0] != "empty"){
-          echo $this->buffer[$h][$w][0];
-          echo $this->buffer[$h][$w][0];
-        }else{
-          echo "&nbsp;&nbsp;&nbsp;&nbsp;";
-        }
-      }
-      echo nl2br("\n");
-    }
+    $this->displayStats($sysInfo, $scene);
   }
 }
 class Face{
@@ -134,6 +184,7 @@ class Face{
     $this->v1index = $v1index;
     $this->v2index = $v2index;
     $this->colorChar = $colorChar;
+    $this->AverageZ = 1000;
   }
   public function checkRay($o, $d, $geometry){ //checks for ray triangle intersection
     $v0 = $geometry->vertices[$this->v0index];
@@ -161,6 +212,23 @@ class Face{
     $t = $equc * $eQ->scalarProduct($eE2);
     if($t < 0){return false;}
     return $t;
+  }
+  public function sign($p1, $p2, $p3){
+    return ($p1->x - $p3->x) * ($p2->y - $p3->y) - ($p2->x - $p3->x) * ($p1->y - $p3->y);
+  }
+  public function isPointInTriangle($point, $geometry){
+    $v0 = $geometry->vertices[$this->v0index];
+    $v1 = $geometry->vertices[$this->v1index];
+    $v2 = $geometry->vertices[$this->v2index];
+
+    $d1 = $this->sign($point, $v0, $v1);
+    $d2 = $this->sign($point, $v1, $v2);
+    $d3 = $this->sign($point, $v2, $v0);
+
+    $has_neg = ($d1 < 0) || ($d2 < 0) || ($d3 < 0);
+    $has_pos = ($d1 > 0) || ($d2 > 0) || ($d3 > 0);
+
+    return !($has_neg && $has_pos);
   }
 }
 class Scene{
