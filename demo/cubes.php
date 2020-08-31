@@ -3,7 +3,7 @@ include('../three.php');
 $frame = $_GET['frame'];
 
 $scene = new Scene();
-$camera = new Camera(new Vec3(0,0,5), 60, 60, 3, 6, true);
+$camera = new RasterCamera(new Vec3(0,0,5), 60, 60, 3, 6, false);
 
 $angle = $frame*7*pi()/180;
 

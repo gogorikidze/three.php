@@ -22,6 +22,6 @@ $geometry->addFace(new Face(0,1,2,'p'));
 $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 
-$camera = new Camera(new Vec3(0,0.7,5), 15, 35, 3, 10, false);
+$camera = new RayCamera(new Vec3(0,0.7,5), 15, 35, 3, 10, false);
 $camera->render($scene, $frame, true);
 ?>
