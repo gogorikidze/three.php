@@ -14,6 +14,13 @@ class Vec3{
   public function vectorProduct($other){
     return new Vec3($this->y * $other->z - $this->z * $other->y, $this->z * $other->x - $this->x * $other->z, $this->x * $other->y - $this->y * $other->x);
   }
+  public function distanceTo($other){
+    $first = $other->x - $this->x;
+    $second = $other->y - $this->y;
+    $third = $other->z - $this->z;
+    $dist = sqrt($first*$first + $second*$second + $third*$third);
+    return $dist;
+  }
 }
 class Camera{
   public function __construct($position, $h, $w, $far, $density, $cacheEnabled){
@@ -98,9 +105,11 @@ class RasterCamera extends Camera{
       foreach($mesh->geometry->faces as $face){
         $point = $this->frustum[$h][$w];
         $barycentric = $face->barycentricAt($point, $mesh->geometry);
-        $z = $face->zCoordAt($face, $barycentric);
+        $z = $point->z - $face->zCoordAt($face, $barycentric);
         if($face->isPointInTriangle($barycentric) && $z < $this->buffer[$h][$w][1]){
             $this->buffer[$h][$w] = [$face->colorChar, $z];
+            //var_dump($this->buffer[$h][$w]);
+            //echo "<br>";
         }
         $this->computations += 1;
       }
@@ -117,9 +126,10 @@ class RasterCamera extends Camera{
         $face->originalZ->y = $v1->z;
         $face->originalZ->z = $v2->z;
 
-        $v0->z = $this->position->z;
-        $v1->z = $this->position->z;
-        $v2->z = $this->position->z;
+        $z = $this->position->z + $this->far;
+        $v0->z = $z;
+        $v1->z = $z;
+        $v2->z = $z;
       }
     }
   }
@@ -134,7 +144,7 @@ class RasterCamera extends Camera{
       }
     }
 
-    $this->renderBuffer();
+    $renderer->renderBuffer($this);
 
     $this->displayStats($sysInfo, $scene);
   }
@@ -203,7 +213,10 @@ class Face{
     return $t;
   }
   public function isPointInTriangle($barycentric){
-    return $barycentric->x > 0 && $barycentric->x < 1 && $barycentric->y > 0 && $barycentric->y < 1 && $barycentric->z > 0 && $barycentric->z < 1;
+    $a = $barycentric->x > 0 && $barycentric->x < 1;
+    $b = $barycentric->y > 0 && $barycentric->y < 1;
+    $c = $barycentric->z > 0 && $barycentric->z < 1;
+    return $a && $b && $c;
   }
   public function barycentricAt($point, $geometry){
     $a = $geometry->vertices[$this->v0index];
@@ -219,6 +232,7 @@ class Face{
     $d20 = $v2->scalarProduct($v0);
     $d21 = $v2->scalarProduct($v1);
     $denom = $d00 * $d11 - $d01 * $d01;
+    if($denom == 0) return new Vec3(0,0,0);
     $v = ($d11 * $d20 - $d01 * $d21) / $denom;
     $w = ($d00 * $d21 - $d01 * $d20) / $denom;
     $u = 1 - $v - $w;
@@ -228,7 +242,8 @@ class Face{
     $v0z = $face->originalZ->x;
     $v1z = $face->originalZ->y;
     $v2z = $face->originalZ->z;
-    return $barycentric->x*$v0z + $barycentric->y*$v1z + $barycentric->z*$v2z;
+    $z = $barycentric->y*$v0z + $barycentric->x*$v1z + $barycentric->z*$v2z;
+    return $z;
   }
 }
 class Scene{
