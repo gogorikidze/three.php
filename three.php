@@ -78,19 +78,6 @@ class Camera{
     $_SESSION['emptyBuffer'] = $buffer;
     $this->buffer = $_SESSION['emptyBuffer'];
   }
-  public function renderBuffer(){
-    for($h = 0; $h < $this->h; $h++){
-      for($w = 0; $w < $this->w; $w++){
-        if($this->buffer[$h][$w][0] != "empty"){
-          echo $this->buffer[$h][$w][0];
-          echo $this->buffer[$h][$w][0];
-        }else{
-          echo "&nbsp;&nbsp;&nbsp;&nbsp;";
-        }
-      }
-      echo nl2br("\n");
-    }
-  }
   public function displayStats($display, $scene){
     if($display){
       $frameTime = microtime(true) - $this->frameStart;
@@ -136,11 +123,8 @@ class RasterCamera extends Camera{
       }
     }
   }
-  public function render($scene, $frame, $sysInfo, $nextframe){
-    $frame += 1;
-    if($nextframe){
-      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
-    }
+  public function render($renderer, $scene, $frame, $sysInfo){
+    $renderer->nextFrame($frame);
 
     $this->projectFaces($scene);
 
@@ -169,11 +153,8 @@ class RayCamera extends Camera{
       }
     }
   }
-  public function render($scene, $frame, $sysInfo, $nextframe){
-    $frame += 1;
-    if($nextframe){
-      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
-    }
+  public function render($renderer, $scene, $frame, $sysInfo){
+    $renderer->nextFrame($frame);
 
     foreach($scene->meshes as $mesh){
       foreach($mesh->geometry->faces as $face){
@@ -181,7 +162,7 @@ class RayCamera extends Camera{
       }
     }
 
-    $this->renderBuffer();
+    $renderer->renderBuffer($this);
 
     $this->displayStats($sysInfo, $scene);
   }
@@ -312,6 +293,44 @@ class Geometry{
       $vertex->x = $Axx*$px + $Axy*$py + $Axz*$pz;
       $vertex->y = $Ayx*$px + $Ayy*$py + $Ayz*$pz;
       $vertex->z = $Azx*$px + $Azy*$py + $Azz*$pz;
+    }
+  }
+}
+class Renderer{
+  public function __construct($animate){
+    $this->animate = $animate;
+  }
+  public function nextFrame($frame){
+    if($this->animate){
+      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.($frame+1));
+    }
+  }
+  public function renderBuffer($camera){
+    for($h = 0; $h < $camera->h; $h++){
+      for($w = 0; $w < $camera->w; $w++){
+        if($camera->buffer[$h][$w][0] != "empty"){
+          echo $camera->buffer[$h][$w][0];
+          echo $camera->buffer[$h][$w][0];
+        }else{
+          echo "&nbsp;&nbsp;&nbsp;&nbsp;";
+        }
+      }
+      echo nl2br("\n");
+    }
+  }
+}
+class HTMLRenderer extends Renderer{
+  public function renderBuffer($camera){
+    for($h = 0; $h < $camera->h; $h++){
+      echo "<div style='overflow:hidden'>";
+      for($w = 0; $w < $camera->w; $w++){
+        if($camera->buffer[$h][$w][0] != "empty"){
+          echo "<div style='float: left;height:2px;width:2px;background-color:".$camera->buffer[$h][$w][0].";padding:0;margin:0'></div>";
+        }else{
+          echo "<div style='float: left;height:2px;width:2px;background-color:cyan;padding:0;margin:0'></div>";
+        }
+      }
+      echo "</div>";
     }
   }
 }
