@@ -5,3 +5,4 @@ Three.php is a PHP 3D renderer that can run on ordinary webservers. On most hard
 ![lastCommit](https://badgen.net/github/last-commit/gogorikidze/three.php)
 ![Commits](https://badgen.net/github/commits/gogorikidze/three.php)
 ![Size](https://img.shields.io/github/repo-size/gogorikidze/three.php)
+![LibSemicolonCount](http://gogorikidze.com/semicolon/badge.php?user=gogorikidze&repo=three.php&branch=master&path=three.php)
