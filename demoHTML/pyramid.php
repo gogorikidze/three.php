@@ -1,5 +1,5 @@
 <?php
-include('../three.php');
+include('../threeHTML.php');
 $frame = $_GET['frame'];
 
 $scene = new Scene();
@@ -14,14 +14,14 @@ $geometry->addVertex(new Vec3(0,1.5,0));
 
 $geometry->rotate($frame*7*pi()/180,0,0);
 
-$geometry->addFace(new Face(0,3,1,'$'));
-$geometry->addFace(new Face(1,3,2,'#'));
-$geometry->addFace(new Face(0,3,2,'9'));
-$geometry->addFace(new Face(0,1,2,'p'));
+$geometry->addFace(new Face(0,3,1,'blue'));
+$geometry->addFace(new Face(1,3,2,'red'));
+$geometry->addFace(new Face(0,3,2,'green'));
+$geometry->addFace(new Face(0,1,2,'white'));
 
 $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 
-$camera = new RayCamera(new Vec3(0,0.7,5), 15, 35, 3, 10, false);
+$camera = new RayCamera(new Vec3(0,0.7,5), 35, 35, 3, 10, false);
 $camera->render($scene, $frame, true, true);
 ?>
