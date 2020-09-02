@@ -296,6 +296,48 @@ class Geometry{
     }
   }
 }
+class CubeGeometry extends Geometry{
+  public function __construct($size, $colors){
+    $this->faces = [];
+    $this->vertices = [];
+
+    $top = $colors[0];
+    $bottom = $colors[1];
+    $front = $colors[2];
+    $back = $colors[3];
+    $left = $colors[4];
+    $right = $colors[5];
+
+    $this->addVertex(new Vec3(-$size,-$size,-$size));
+    $this->addVertex(new Vec3($size,-$size,-$size));
+    $this->addVertex(new Vec3($size,-$size,$size));
+    $this->addVertex(new Vec3(-$size,-$size,$size));
+
+    $this->addVertex(new Vec3(-$size,$size,-$size));
+    $this->addVertex(new Vec3($size,$size,-$size));
+    $this->addVertex(new Vec3($size,$size,$size));
+    $this->addVertex(new Vec3(-$size,$size,$size));
+
+    //top
+    $this->addFace(new Face(3,2,0,$top));
+    $this->addFace(new Face(2,1,0,$top));
+    //bottom
+    $this->addFace(new Face(7,6,5,$bottom));
+    $this->addFace(new Face(4,7,5,$bottom));
+
+    $this->addFace(new Face(0,5,1,$front));
+    $this->addFace(new Face(0,5,4,$front));
+
+    $this->addFace(new Face(4,7,0,$left));
+    $this->addFace(new Face(0,3,7,$left));
+
+    $this->addFace(new Face(5,6,1,$right));
+    $this->addFace(new Face(6,2,1,$right));
+
+    $this->addFace(new Face(7,6,3,$back));
+    $this->addFace(new Face(6,2,3,$back));
+  }
+}
 class Renderer{
   public function __construct($animate){
     $this->animate = $animate;
