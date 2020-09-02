@@ -110,8 +110,10 @@ class RasterCamera extends Camera{
     foreach($scene->meshes as $mesh){
       foreach($mesh->geometry->faces as $face){
         $point = $this->frustum[$h][$w];
-        if($face->isPointInTriangle($point, $mesh->geometry) && $face->AverageZ < $this->buffer[$h][$w][1]){
-            $this->buffer[$h][$w] = [$face->colorChar, $face->AverageZ];
+        $barycentric = $face->barycentricAt($point, $mesh->geometry);
+        $z = $face->zCoordAt($face, $barycentric);
+        if($face->isPointInTriangle($barycentric) && $z < $this->buffer[$h][$w][1]){
+            $this->buffer[$h][$w] = [$face->colorChar, $z];
         }
         $this->computations += 1;
       }
@@ -124,7 +126,9 @@ class RasterCamera extends Camera{
         $v1 = $mesh->geometry->vertices[$face->v1index];
         $v2 = $mesh->geometry->vertices[$face->v2index];
 
-        $face->AverageZ = ($v0->z + $v1->z + $v2->z)/3;
+        $face->originalZ->x = $v0->z;
+        $face->originalZ->y = $v1->z;
+        $face->originalZ->z = $v2->z;
 
         $v0->z = $this->position->z;
         $v1->z = $this->position->z;
@@ -132,9 +136,11 @@ class RasterCamera extends Camera{
       }
     }
   }
-  public function render($scene, $frame, $sysInfo){
+  public function render($scene, $frame, $sysInfo, $nextframe){
     $frame += 1;
-    header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
+    if($nextframe){
+      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
+    }
 
     $this->projectFaces($scene);
 
@@ -163,9 +169,11 @@ class RayCamera extends Camera{
       }
     }
   }
-  public function render($scene, $frame, $sysInfo){
+  public function render($scene, $frame, $sysInfo, $nextframe){
     $frame += 1;
-    header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
+    if($nextframe){
+      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.$frame);
+    }
 
     foreach($scene->meshes as $mesh){
       foreach($mesh->geometry->faces as $face){
@@ -184,7 +192,7 @@ class Face{
     $this->v1index = $v1index;
     $this->v2index = $v2index;
     $this->colorChar = $colorChar;
-    $this->AverageZ = 1000;
+    $this->originalZ = new Vec3(0,0,0);
   }
   public function checkRay($o, $d, $geometry){ //checks for ray triangle intersection
     $v0 = $geometry->vertices[$this->v0index];
@@ -213,22 +221,33 @@ class Face{
     if($t < 0){return false;}
     return $t;
   }
-  public function sign($p1, $p2, $p3){
-    return ($p1->x - $p3->x) * ($p2->y - $p3->y) - ($p2->x - $p3->x) * ($p1->y - $p3->y);
+  public function isPointInTriangle($barycentric){
+    return $barycentric->x > 0 && $barycentric->x < 1 && $barycentric->y > 0 && $barycentric->y < 1 && $barycentric->z > 0 && $barycentric->z < 1;
   }
-  public function isPointInTriangle($point, $geometry){
-    $v0 = $geometry->vertices[$this->v0index];
-    $v1 = $geometry->vertices[$this->v1index];
-    $v2 = $geometry->vertices[$this->v2index];
+  public function barycentricAt($point, $geometry){
+    $a = $geometry->vertices[$this->v0index];
+    $b = $geometry->vertices[$this->v1index];
+    $c = $geometry->vertices[$this->v2index];
 
-    $d1 = $this->sign($point, $v0, $v1);
-    $d2 = $this->sign($point, $v1, $v2);
-    $d3 = $this->sign($point, $v2, $v0);
-
-    $has_neg = ($d1 < 0) || ($d2 < 0) || ($d3 < 0);
-    $has_pos = ($d1 > 0) || ($d2 > 0) || ($d3 > 0);
-
-    return !($has_neg && $has_pos);
+    $v0 = $b->subv($a);
+    $v1 = $c->subv($a);
+    $v2 = $point->subv($a);
+    $d00 = $v0->scalarProduct($v0);
+    $d01 = $v0->scalarProduct($v1);
+    $d11 = $v1->scalarProduct($v1);
+    $d20 = $v2->scalarProduct($v0);
+    $d21 = $v2->scalarProduct($v1);
+    $denom = $d00 * $d11 - $d01 * $d01;
+    $v = ($d11 * $d20 - $d01 * $d21) / $denom;
+    $w = ($d00 * $d21 - $d01 * $d20) / $denom;
+    $u = 1 - $v - $w;
+    return new Vec3($u, $v, $w);
+  }
+  public function zCoordAt($face, $barycentric){
+    $v0z = $face->originalZ->x;
+    $v1z = $face->originalZ->y;
+    $v2z = $face->originalZ->z;
+    return $barycentric->x*$v0z + $barycentric->y*$v1z + $barycentric->z*$v2z;
   }
 }
 class Scene{
