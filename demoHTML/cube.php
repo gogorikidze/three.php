@@ -1,8 +1,9 @@
 <?php
-include('../threeHTML.php');
+include('../three.php');
 $frame = $_GET['frame'];
 
 $scene = new Scene();
+$renderer = new HTMLRenderer(true);
 $camera = new RayCamera(new Vec3(0,0,5), 25, 25, 3, 6, false);
 
 $angle = $frame*7*pi()/180;
@@ -12,7 +13,7 @@ $geometry->rotate($angle,-$angle,$angle*3);
 $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 
-$camera->render($scene, $frame, true, true);
+$camera->render($renderer, $scene, $frame, true);
 
 function cube($size){
   $geometry = new Geometry();

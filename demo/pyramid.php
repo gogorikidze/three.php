@@ -3,6 +3,7 @@ include('../three.php');
 $frame = $_GET['frame'];
 
 $scene = new Scene();
+$renderer = new Renderer(true);
 
 //sets up geometry
 $geometry = new Geometry();
@@ -23,5 +24,5 @@ $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 
 $camera = new RayCamera(new Vec3(0,0.7,5), 15, 35, 3, 10, false);
-$camera->render($scene, $frame, true, true);
+$camera->render($renderer, $scene, $frame, true);
 ?>
