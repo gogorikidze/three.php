@@ -25,6 +25,7 @@ class Vec3{
 class Camera{
   public function __construct($position, $h, $w, $far, $density, $cacheEnabled){
     $this->frameStart = microtime(true);
+    $this->frameNum = 0;
     $this->density = $density;
     $this->far = $far;
     $this->position = $position;
@@ -85,69 +86,6 @@ class Camera{
     $_SESSION['emptyBuffer'] = $buffer;
     $this->buffer = $_SESSION['emptyBuffer'];
   }
-  public function displayStats($display, $scene){
-    if($display){
-      $frameTime = microtime(true) - $this->frameStart;
-      $fps = 1 / $frameTime;
-      $faces = 0;
-      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
-      echo nl2br("stats: \n");
-      echo nl2br("FramesPerSecond: ".$fps."\n");
-      echo nl2br("frameTime: ".$frameTime."\n");
-      echo nl2br("resolution: ".$this->w."x".$this->h."CPX \n");
-      echo nl2br("Calculations: ".$this->computations."\n");
-    }
-  }
-}
-class RasterCamera extends Camera{
-  public function renderPixel($h, $w, $scene){
-    foreach($scene->meshes as $mesh){
-      foreach($mesh->geometry->faces as $face){
-        $point = $this->frustum[$h][$w];
-        $barycentric = $face->barycentricAt($point, $mesh->geometry);
-        $z = $point->z - $face->zCoordAt($face, $barycentric);
-        if($face->isPointInTriangle($barycentric) && $z < $this->buffer[$h][$w][1]){
-            $this->buffer[$h][$w] = [$face->colorChar, $z];
-            //var_dump($this->buffer[$h][$w]);
-            //echo "<br>";
-        }
-        $this->computations += 1;
-      }
-    }
-  }
-  public function projectFaces($scene){ //just changes point Z co-ords to Cameras Z co-ords
-    foreach($scene->meshes as $mesh){
-      foreach($mesh->geometry->faces as $face){
-        $v0 = $mesh->geometry->vertices[$face->v0index];
-        $v1 = $mesh->geometry->vertices[$face->v1index];
-        $v2 = $mesh->geometry->vertices[$face->v2index];
-
-        $face->originalZ->x = $v0->z;
-        $face->originalZ->y = $v1->z;
-        $face->originalZ->z = $v2->z;
-
-        $z = $this->position->z + $this->far;
-        $v0->z = $z;
-        $v1->z = $z;
-        $v2->z = $z;
-      }
-    }
-  }
-  public function render($renderer, $scene, $frame, $sysInfo){
-    $renderer->nextFrame($frame);
-
-    $this->projectFaces($scene);
-
-    for($h = 0; $h < $this->h; $h++){
-      for($w = 0; $w < $this->w; $w++){
-        $this->renderPixel($h, $w, $scene);
-      }
-    }
-
-    $renderer->renderBuffer($this);
-
-    $this->displayStats($sysInfo, $scene);
-  }
 }
 class RayCamera extends Camera{
   public function renderFace($face, $geometry, $mesh){
@@ -162,19 +100,6 @@ class RayCamera extends Camera{
         $this->computations += 1;
       }
     }
-  }
-  public function render($renderer, $scene, $frame, $sysInfo){
-    $renderer->nextFrame($frame);
-
-    foreach($scene->meshes as $mesh){
-      foreach($mesh->geometry->faces as $face){
-          $this->renderFace($face, $mesh->geometry, $mesh);
-      }
-    }
-
-    $renderer->renderBuffer($this);
-
-    $this->displayStats($sysInfo, $scene);
   }
 }
 class Face{
@@ -353,7 +278,7 @@ class CubeGeometry extends Geometry{
     $this->addFace(new Face(6,2,3,$back));
   }
 }
-class Renderer{
+class WebRenderer{
   public function __construct($animate){
     $this->animate = $animate;
   }
@@ -375,8 +300,34 @@ class Renderer{
       echo nl2br("\n");
     }
   }
+  public function render($camera, $scene, $frame, $sysInfo = true){
+    $this->nextFrame($frame);
+
+    foreach($scene->meshes as $mesh){
+      foreach($mesh->geometry->faces as $face){
+          $camera->renderFace($face, $mesh->geometry, $mesh);
+      }
+    }
+
+    $this->renderBuffer($camera);
+
+    $this->displayStats($camera, $sysInfo, $scene);
+  }
+  public function displayStats($camera, $display, $scene){
+    if($display){
+      $frameTime = microtime(true) - $camera->frameStart;
+      $fps = 1 / $frameTime;
+      $faces = 0;
+      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
+      echo nl2br("stats: \n");
+      echo nl2br("FramesPerSecond: ".$fps."\n");
+      echo nl2br("frameTime: ".$frameTime."\n");
+      echo nl2br("resolution: ".$camera->w."x".$camera->h."CPX \n");
+      echo nl2br("Calculations: ".$camera->computations."\n");
+    }
+  }
 }
-class HTMLRenderer extends Renderer{
+class HTMLRenderer extends WebRenderer{
   public function renderBuffer($camera){
     for($h = 0; $h < $camera->h; $h++){
       echo "<div style='overflow:hidden'>";
@@ -389,6 +340,56 @@ class HTMLRenderer extends Renderer{
       }
       echo "</div>";
     }
+  }
+}
+class ConsoleRenderer{
+  public function displayStats($camera, $display, $scene){
+    if($display){
+      $time = microtime(true);
+      $frameTime = $time - $camera->frameStart;
+      $camera->frameStart = $time;
+      $fps = 1 / $frameTime;
+      $faces = 0;
+      foreach ($scene->meshes as $mesh) foreach ($mesh->geometry->faces as $face) $faces += 1;
+      //echo "stats: \n";
+      echo "FramesPerSecond: ".$fps."";
+      //echo "frameTime: ".$frameTime."\n";
+      //echo "resolution: ".$camera->w."x".$camera->h."CPX \n";
+      //echo "Calculations: ".$camera->computations."\n";
+    }
+  }
+  public function renderBuffer($camera){
+    //system('cls');
+    $DisplayFrame = "";
+    for($h = 0; $h < $camera->h; $h++){
+      $line = "";
+      for($w = 0; $w < $camera->w; $w++){
+        if($camera->buffer[$h][$w][0] != "empty"){
+          $line = $line . "\e[".$camera->buffer[$h][$w][0]."m  \033[m";
+        }else{
+          $line = $line . "  ";
+        }
+      }
+      $DisplayFrame = $DisplayFrame.$line."\n";
+    }
+    echo $DisplayFrame;
+  }
+  public function render($camera, $scene, $logic = 'none', $logicParams = null, $sysInfo = true){
+    if($logic != 'none') $logic($logicParams);
+
+    foreach($scene->meshes as $mesh){
+      foreach($mesh->geometry->faces as $face){
+          $camera->renderFace($face, $mesh->geometry, $mesh);
+      }
+    }
+
+    $this->renderBuffer($camera);
+
+    $this->displayStats($camera, $sysInfo, $scene);
+
+    sleep(0.1);
+    $camera->frame += 1;
+    $this->render($camera, $scene, $sysInfo);
   }
 }
 ?>
