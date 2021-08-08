@@ -1,4 +1,7 @@
 <?php session_start();
+function rand_color() {
+  return sprintf('#%06X', mt_rand(0, 0xFFFFFF));
+}
 class Vec3{
   public function __construct($x, $y, $z) {
     $this->x = $x;
@@ -276,6 +279,60 @@ class CubeGeometry extends Geometry{
 
     $this->addFace(new Face(7,6,3,$back));
     $this->addFace(new Face(6,2,3,$back));
+  }
+}
+class LoadedGeometry extends Geometry{
+  public function __construct($size, $filepath){
+    $this->faces = [];
+    $this->vertices = [];
+
+    foreach($this->getLines($filepath) as $line) {
+      if($line[0].$line[1] == "v "){
+        $values = explode(" ",$line);
+        $this->addVertex(new Vec3(
+            floatval($values[1]),
+            floatval($values[2]),
+            floatval($values[3]))
+        );
+      }
+      if($line[0].$line[1] == "f "){
+        $values = explode(" ",$line);
+        if(count($values) == 5){
+          $this->addFace(new Face(
+            intval(explode("/", $values[1])[0]) - 1,
+            intval(explode("/", $values[2])[0]) - 1,
+            intval(explode("/", $values[3])[0]) - 1, rand_color())
+          );
+          $this->addFace(new Face(
+            intval(explode("/", $values[1])[0]) - 1,
+            intval(explode("/", $values[3])[0]) - 1,
+            intval(explode("/", $values[4])[0]) - 1, rand_color())
+          );
+        }else if(count($values) == 4){
+          $this->addFace(new Face(
+            intval(explode("/", $values[1])[0]) - 1,
+            intval(explode("/", $values[2])[0]) - 1,
+            intval(explode("/", $values[3])[0]) - 1, rand_color())
+          );
+        }else{
+          echo "wtf";
+        }
+      }
+    }
+    // var_dump($this->vertices);
+    // echo "<br>";
+    // var_dump($this->faces);
+  }
+  function getLines($filepath){
+    $file = fopen($filepath, "r");
+    if (!$file)
+        die('file does not exist or cannot be opened');
+
+    while (($line = fgets($file)) !== false) {
+        yield $line;
+    }
+
+    fclose($file);
   }
 }
 class WebRenderer{
