@@ -281,10 +281,11 @@ class CubeGeometry extends Geometry{
 class WebRenderer{
   public function __construct($animate){
     $this->animate = $animate;
+    $this->RendererType = "";
   }
   public function nextFrame($frame){
     if($this->animate){
-      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.($frame+1));
+      header('refresh:0.001; url='.basename($_SERVER['PHP_SELF']).'?frame='.($frame+1)."&rendererType=".$this->RendererType);
     }
   }
   public function renderBuffer($camera){
@@ -328,6 +329,10 @@ class WebRenderer{
   }
 }
 class HTMLRenderer extends WebRenderer{
+  public function __construct($animate){
+    $this->animate = $animate;
+    $this->RendererType = "HTMLRenderer";
+  }
   public function renderBuffer($camera){
     for($h = 0; $h < $camera->h; $h++){
       echo "<div style='overflow:hidden'>";
