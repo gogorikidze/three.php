@@ -4,11 +4,9 @@ include('../three.php');
 
 $scene = new Scene();
 $renderer = new HTMLRenderer(false);
-$camera = new RayCamera(new Vec3(0,0,5), 300, 300, 3, 50, false);
+$camera = new RayCamera(new Vec3(0,0,5), 100, 100, 3, 35, false);
 
-$geometry = new LoadedGeometry(1, "box.obj");
-//$angle = $frame*7*pi()/180;
-//$geometry->rotate($angle,-$angle,$angle*3);
+$geometry = new LoadedGeometry(1, 'obj/suzanne.obj');
 $mesh = new Mesh($geometry, '#');
 $scene->addMesh($mesh);
 

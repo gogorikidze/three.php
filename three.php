@@ -286,6 +286,9 @@ class LoadedGeometry extends Geometry{
     $this->faces = [];
     $this->vertices = [];
 
+    $this->loadOBJ($filepath);
+  }
+  function loadOBJ($filepath){
     foreach($this->getLines($filepath) as $line) {
       if($line[0].$line[1] == "v "){
         $values = explode(" ",$line);
@@ -319,9 +322,6 @@ class LoadedGeometry extends Geometry{
         }
       }
     }
-    // var_dump($this->vertices);
-    // echo "<br>";
-    // var_dump($this->faces);
   }
   function getLines($filepath){
     $file = fopen($filepath, "r");
